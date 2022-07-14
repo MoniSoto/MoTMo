@@ -16,10 +16,16 @@ PATH2 = '/home/moni/Documents/motmo/data_without_hhID/' # folde docs hhID
 def get_region_ids():
     return [942, 1515, 1516, 1517, 1518, 1519, 1520, 2331, 2332, 2333, 2334, 2335, 2336, 3312, 3562, 6321]
 
-def suma(a,b):
-    a = a+2
-    n = 1+b+a
-    return n
+def get_best_scenarios_dict():
+    best_sc_dict = [{'CH1SP1SE0WE1BP0RE1CO0DI1WO1CS0': ['Schleswig-Holstein', 'Bremen',
+    'Hamburg']}, 
+    {'CH1SP1SE0WE1BP0RE1CO1DI1WO0CS0': ['Nordrhein-Westfalen', 'Saarland',
+    'Bayern', 'Mecklenburg-Vorpommern', 'Brandenburg', 'Niedersachsen']},
+    {'CH0SP1SE0WE1BP0RE1CO1DI1WO0CS0': ['Baden-Wurttemberg', 'Hessen',
+    'Thuringen', 'Sachsen-Anhalt', 'Sachsen']}, 
+    {'CH0SP1SE0WE1BP0RE1CO0DI1WO0CS1': ['Rheinland-Pfalz']},
+    {'CH0SP1SE0WE0BP1RE1CO1DI0WO0CS0': ['Berlin']}]
+    return best_sc_dict
 
 def get_stock_vars():
     return ['stock_C','stock_E','stock_N','stock_P','stock_S']
@@ -28,7 +34,7 @@ def get_emission_vars():
     return ['emissions_C','emissions_E','emissions_N','emissions_P','emissions_S']
 
 def get_dict_steps_dates():
-    dates_list = pd.date_range(start = "2018-01-01",periods = 181,freq="2M").strftime("%b-%Y").tolist()
+    dates_list = pd.date_range(start = "2005-01-01",periods = 181,freq="2M").strftime("%b-%Y").tolist()
     dict_dates = dict(zip(list(range(0,181)),dates_list))
     return dict_dates
 
@@ -124,6 +130,7 @@ def get_df_plot_regions(df,var_name):
     return df_plot
 
 def get_df_emi_change_global(df):
+    # this function is wrong. do not use!
     df2 = timeStep_stock_emissions_returns(df)[['step','change_total_emissions']].groupby(['step']).sum().reset_index()
     return df2
 

@@ -34,7 +34,7 @@ def get_emission_vars():
     return ['emissions_C','emissions_E','emissions_N','emissions_P','emissions_S']
 
 def get_dict_steps_dates():
-    dates_list = pd.date_range(start = "2018-01-01",periods = 181,freq="2M").strftime("%b-%Y").tolist()
+    dates_list = pd.date_range(start = "2005-01-01",periods = 181,freq="2M").strftime("%b-%Y").tolist()
     dict_dates = dict(zip(list(range(0,181)),dates_list))
     return dict_dates
 
@@ -122,11 +122,14 @@ def get_rate_change_region(df, reg_id):
     # change of an specific region.
     return df2[df2['reID']==reg_id]
 
-def get_df_plot_regions(df,var_name):
+def get_df_plot_regions(df,start_step,var_name):
     df2 = timeStep_stock_emissions_returns(df)
-    dates_string = list(get_dict_steps_dates().values())
+    dates_dict = get_dict_steps_dates()
+    dates_dict = {k:v for (k,v) in dates_dict.items() if k >= start_step}
+    dates_list = list(dates_dict.values())
+
     df_plot = df2[['step','region_name',var_name]].pivot(index='step', columns='region_name', values=var_name).reset_index()
-    df_plot['step'] = dates_string
+    df_plot['step'] = dates_list
     return df_plot
 
 def get_df_emi_change_global(df):
