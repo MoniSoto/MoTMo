@@ -167,7 +167,7 @@ def calculate_confidence_intervals(dataset, confidence):
     confidence_interval = (mean-s_dev*t_crit/np.sqrt(num_datapoints), mean+s_dev*t_crit/np.sqrt(num_datapoints)) 
     return confidence_interval
 
-def sensitivity_analysis_experiment(num_samples, num_runs, df, col_name):
+def sensitivity_analysis_summary_stats(num_samples, num_runs, df, col_name):
     S1_I_arr = []
     S1_P_arr = []
     S1_E_arr = []
@@ -202,3 +202,19 @@ def sensitivity_analysis_experiment(num_samples, num_runs, df, col_name):
         }
     }
     return sensitivity_indices_dict
+
+def sensitivity_analysis_results_raw_output(num_samples, num_runs, df, col_name):
+    S1_I_arr = []
+    S1_P_arr = []
+    S1_E_arr = []
+    for i in range (0, num_runs):
+        sensitivity_indices = calculate_sensitivity_indices(df, 'total_emissions', 8)
+        S1_I_arr.append(sensitivity_indices['investment'])
+        S1_P_arr.append(sensitivity_indices['policy'])
+        S1_E_arr.append(sensitivity_indices['event'])
+        
+    S1_I_np_arr = np.array(S1_I_arr)
+    S1_P_np_arr = np.array(S1_P_arr)
+    S1_E_np_arr = np.array(S1_E_arr)
+    
+    return (S1_I_np_arr, S1_P_np_arr, S1_E_np_arr)
