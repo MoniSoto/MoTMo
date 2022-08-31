@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+import itertools
 import datetime as dt
 import time
 
@@ -12,6 +12,79 @@ from itertools import product
 
 PATH = '/home/moni/Documents/motmo/timeSeries_files/' # original data
 PATH2 = '/home/moni/Documents/motmo/data_without_hhID/' # folde docs hhID
+
+
+num_options_per_category = {
+    'investment' : 3,
+    'policy' : 3,
+    'event' : 4
+}
+# ------------[INPUT SPACE SECTION]--------------------
+def valid_scenarios_for_category(num_options):
+    total_scenarios = list(itertools.product(range(2), repeat=num_options))
+    valid_scenarios = [i for i in total_scenarios if sum(i)<3]
+    return valid_scenarios
+
+def generate_input_space_bool(category_options_dict):
+    valid_scenarios_per_category_list = []
+    for category, num_options in category_options_dict.items():
+        valid_scenarios = valid_scenarios_for_category(num_options)
+        valid_scenarios_per_category_list.append(valid_scenarios)
+    
+    # 539 input scenarios in dataset
+    input_scenarios = list(itertools.product(*valid_scenarios_per_category_list))
+    return input_scenarios
+
+def input_bool_to_decimal_dicts(category_options_dict):
+    input_space_decimal_dict = {}
+    
+    for category, num_options in category_options_dict.items():
+        valid_scenarios = valid_scenarios_for_category(num_options)
+        num_scenarios = len(valid_scenarios)
+        scenerios_decimal = list(range(0,num_scenarios,1))
+        scenerios_decimal = [i/(num_scenarios - 1) for i in scenerios_decimal]
+        bool_to_decimal_dict = dict(zip(valid_scenarios,scenerios_decimal))
+        input_space_decimal_dict[category] = bool_to_decimal_dict
+    
+    return input_space_decimal_dict
+
+def input_space_decimal(category_options_dict):
+    input_bool = generate_input_space_bool(category_options_dict)
+    inputs_d = []
+    k=0
+    for i in input_bool:
+        t = [category_options_dict['investment'][i[0]], category_options_dict['policy'][i[1]], category_options_dict['event'][i[2]]]
+        inputs_d.append(t)
+    return inputs_d
+
+def input_space_decimal_to_bool_dicts(category_options_dict):
+    input_space_decimal_dict = {}
+    
+    for category, num_options in category_options_dict.items():
+        valid_scenarios = valid_scenarios_for_category(num_options)
+        num_scenarios = len(valid_scenarios)
+        scenerios_decimal = list(range(0,num_scenarios,1))
+        scenerios_decimal = [i/(num_scenarios - 1) for i in scenerios_decimal]
+        bool_to_decimal_dict = dict(zip(scenerios_decimal,valid_scenarios))
+        input_space_decimal_dict[category] = bool_to_decimal_dict
+    
+    return input_space_decimal_dict
+
+def from_dec_to_bool(dec_to_bool_dicts, row):
+    d_I = dec_to_bool_dicts['investment']
+    d_P = dec_to_bool_dicts['policy']
+    d_E = dec_to_bool_dicts['event']
+    rbool = [d_I[row[0]], d_P[row[1]], d_E[row[2]]]
+    return rbool
+
+# ------------[USEFUL DICTIONARIES/LISTS SECTION]--------------------
+def get_scenario_string(boolean_scenario): 
+    bool_sc = list(sum(boolean_scenario,())) # flatten list
+    list_events = ['CH','SP','SE','WE','BP','RE','CO','DI','WO','CS']
+    s_n = [l+str(s) for l,s in zip(list_events,bool_sc)]
+    s_n = ''.join(s_n)
+    scenario_name = s_n
+    return scenario_name
 
 def get_region_ids():
     return [942, 1515, 1516, 1517, 1518, 1519, 1520, 2331, 2332, 2333, 2334, 2335, 2336, 3312, 3562, 6321]
@@ -59,6 +132,7 @@ def get_dict_regions():
     dict_reg = {region_keys[i]: region_names[i] for i in range(len(region_keys))}
     return dict_reg
 
+# ------------[SOME METRICS (PER REGIONS) SECTION]--------------------
 def get_tot_emi_per_region(file_name):
     # this 'file_name' has to be a full string with prefix and .csv extension of a scenario!
     region_dict = get_dict_regions()
@@ -132,6 +206,7 @@ def get_df_plot_regions(df,start_step,var_name):
     df_plot['step'] = dates_list
     return df_plot
 
+#-----------------[GLOBAL METRICS SECTION]-----------------
 def get_df_emi_change_global(df):
     # this function is wrong. do not use!
     df2 = timeStep_stock_emissions_returns(df)[['step','change_total_emissions']].groupby(['step']).sum().reset_index()
@@ -145,3 +220,30 @@ def rateChange_all(df):
     emis_df = new_df.groupby(['step']).sum().reset_index()
     emis_df['change'] = ((emis_df['total_emissions'] / emis_df['total_emissions'].shift(1)) -1).fillna(0)
     return emis_df
+
+def get_sum_vars_scenario(boolean_tuple):
+    # INPUT: boolean string representing a category. For example, (1,0,0). 
+    # OUTPUT: dataframe with compounded output of each variable.
+    # WARNING: 'PATH2' is a local directory and stores all files for each scenario!
+
+    scenario_name = get_scenario_string(boolean_tuple)
+    file_name = "timeSeries_" + scenario_name + ".csv"
+    scenario_df = pd.read_csv(PATH2 + file_name, index_col=0)
+    columns = ['step','stock_C','stock_E','stock_N','stock_P','stock_S','total_emissions']
+    scenario_df = scenario_df[columns].groupby(['step']).sum()
+    scenario_df = scenario_df.iloc[77:]
+    return scenario_df
+
+def get_sum_all_vars(output_vars):
+    input_spc_bool = generate_input_space_bool(num_options_per_category)
+    # scenarios_string_list = [mo.get_scenario_string(x) for x in input_spc_bool]
+    sums_dict = {}
+    
+    for scenario_bool in input_spc_bool:
+        df = get_sum_vars_scenario(scenario_bool)
+        sum_dict = df.sum().to_dict()
+        scenario_name = get_scenario_string(scenario_bool)
+        sum_list = list(sum_dict.values())
+        sums_dict[scenario_name] = sum_list
+    df = pd.DataFrame.from_dict(sums_dict, orient='index',columns=output_vars)
+    return df
